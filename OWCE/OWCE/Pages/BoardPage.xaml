@@ -62,7 +62,9 @@
              <ScrollView HorizontalOptions="FillAndExpand" VerticalOptions="End">
                 <StackLayout Padding="20,0,20,0">
                     <BoxView HorizontalOptions="FillAndExpand" Color="{StaticResource darkBackgroundColor}" HeightRequest="1" Margin="0" />
-                    
+
+                    <Button HorizontalOptions="FillAndExpand" VerticalOptions="Center" Text="Start Speed Reporting" Clicked="SpeedReporting_Clicked" />
+
                     <StackLayout Orientation="Horizontal" HeightRequest="40">
                         <Label Text="BoardType" FontAttributes="Bold" HorizontalOptions="StartAndExpand" VerticalOptions="Center" />
                         <Label Text="{Binding Board.BoardType}" HorizontalOptions="End" VerticalOptions="Center" />
@@ -317,7 +319,6 @@
                     
                     <Button x:Name="LogDataButton" HorizontalOptions="FillAndExpand" VerticalOptions="End" Text="Start Logging Data" Clicked="LogData_Clicked" />
                      -->
-                    
                     <Button HorizontalOptions="FillAndExpand" VerticalOptions="End" Text="Disconnect" Clicked="Disconnect_Clicked" />
                    
                 </StackLayout>

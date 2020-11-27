@@ -25,7 +25,7 @@ namespace OWCE
 
     public class OWBoard : object, IEquatable<OWBoard>, INotifyPropertyChanged
     {
-        public const string ServiceUUID = "E659F300-EA98-11E3-AC10-0800200C9A66";
+        public const string ServiceUUID = "E659F300-EA98-11E3-AC10-0800200C9A66"; // TODO: Remove. ID for the OneWheel. To search for additional devices i.e. shutter button, other device needs to be added.
         public const string SerialNumberUUID = "E659F301-EA98-11E3-AC10-0800200C9A66";
         public const string RideModeUUID = "E659F302-EA98-11E3-AC10-0800200C9A66";
         public const string BatteryPercentUUID = "E659F303-EA98-11E3-AC10-0800200C9A66";
@@ -60,8 +60,6 @@ namespace OWCE
         public const string UNKNOWN2UUID = "E659F31E-EA98-11E3-AC10-0800200C9A66";
         public const string UNKNOWN3UUID = "E659F31F-EA98-11E3-AC10-0800200C9A66";
         public const string UNKNOWN4UUID = "E659F320-EA98-11E3-AC10-0800200C9A66";
-
-
 
         private string _id = String.Empty;
         //[SQLite.PrimaryKey]
@@ -335,7 +333,17 @@ namespace OWCE
         public float Speed
         {
             get { return _speed; }
-            set { if (_speed != value) { _speed = value; OnPropertyChanged(); } }
+            set
+            { 
+                if (_speed != value)
+                {
+                    _speed = value;
+                    OnPropertyChanged();
+                    var speedArgs = new SpeedChangedEventArgs();
+                    speedArgs.speedValue = value;
+                    OnSpeedChanged(speedArgs);
+                }
+            }
         }
 
         private bool _lightMode = false;
@@ -548,6 +556,23 @@ namespace OWCE
         protected virtual void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public class SpeedChangedEventArgs : EventArgs
+        {
+            public float speedValue;
+        }
+
+        public delegate void SpeedChangedEventHandler(object sender, SpeedChangedEventArgs e);
+
+        public event SpeedChangedEventHandler SpeedChanged;
+
+        public void OnSpeedChanged(SpeedChangedEventArgs e)
+        {
+            if (SpeedChanged != null)
+            {
+                SpeedChanged(this, e);
+            }
         }
 
         IService _service = null;
