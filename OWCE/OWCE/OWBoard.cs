@@ -1354,7 +1354,7 @@ namespace OWCE
                 case BatteryVoltageUUID:
                     BatteryVoltage = 0.1f * value;
 
-                    _voltageAggregator.AppendVoltageEntry(value);
+                    _voltageAggregator.AppendVoltageEntry(BatteryVoltage);
 
                     float medianVoltage = _voltageAggregator.GetMedianVoltage();
                     BatteryPercentInferredFromVoltage = Converters.BatteryVoltageConverter.GetBatteryPercentEstimate(medianVoltage);
