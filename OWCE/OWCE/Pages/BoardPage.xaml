@@ -81,7 +81,7 @@
         </yummy:PancakeView>
         <ScrollView>
             <StackLayout Spacing="16" Margin="0,16,0,0">
-                <views:SpeedRangeDistanceView x:Name="SpeedRangeDistanceView" HeightRequest="180" RPM="{Binding RPM}" WheelCircumference="{Binding WheelCircumference}" LifetimeOdometer="{Binding LifetimeOdometer}" TripOdometer="{Binding TripOdometer}" />
+                <views:SpeedRangeDistanceView x:Name="SpeedRangeDistanceView" HeightRequest="180" RPM="{Binding RPM}" Speed="{Binding Speed}" WheelCircumference="{Binding WheelCircumference}" LifetimeOdometer="{Binding LifetimeOdometer}" TripOdometer="{Binding TripOdometer}" />
                 <views:BatteryView BindingContext="{Binding .}" BatteryPercent="{Binding SelectedBatteryPercent}" BatteryVoltage="{Binding BatteryVoltage}" BatteryCells="{Binding BatteryCells}"  />
                 <views:PowerView BindingContext="{Binding .}" CurrentAmps="{Binding CurrentAmps}" IsRegen="{Binding IsRegen}" TripAmpHours="{Binding TripAmpHours}" TripRegenAmpHours="{Binding TripRegenAmpHours}" />
                 <views:TemperatureView x:Name="TemperatureView" BindingContext="{Binding .}" ControllerTemp="{Binding ControllerTemperature}" MotorTemp="{Binding MotorTemperature}" BatteryTemp="{Binding BatteryTemperature}" />

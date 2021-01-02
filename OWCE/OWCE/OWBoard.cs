@@ -1296,6 +1296,7 @@ namespace OWCE
                     break;
                 case RpmUUID:
                     RPM = value;
+                    Speed = Converters.RpmToSpeedConverter.ConvertSpeedValueFromRpm(value, WheelCircumference, App.Current.MetricDisplay);
                     break;
                 case RideModeUUID:
                     RideMode = value;

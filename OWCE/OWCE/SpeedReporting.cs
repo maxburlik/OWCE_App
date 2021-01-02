@@ -72,7 +72,7 @@
         private void Board_SpeedChanged(object sender, SpeedChangedEventArgs e)
         {
             var currentTime = DateTime.Now;
-            int newSpeed = (int)SpeedConverter.ConvertSpeedValue(e.speedValue, App.Current.MetricDisplay);
+            int newSpeed = (int)e.speedValue;
 
             if (newSpeed >= MinSpeed)
             {
