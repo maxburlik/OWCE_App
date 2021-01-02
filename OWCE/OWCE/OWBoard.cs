@@ -47,6 +47,20 @@ namespace OWCE
         public const int Pint_Skyline = 8;
     }
 
+    public class BatteryPercentChangedEventArgs : EventArgs
+    {
+        public int batteryPercentValue;
+    }
+
+    public delegate void BatteryPercentChangedEventHandler(object sender, BatteryPercentChangedEventArgs e);
+
+    public class SpeedChangedEventArgs : EventArgs
+    {
+        public float speedValue;
+    }
+
+    public delegate void SpeedChangedEventHandler(object sender, SpeedChangedEventArgs e);
+
     public class OWBoard : OWBaseBoard
     {
         public static readonly Guid ServiceUUID = new Guid("E659F300-EA98-11E3-AC10-0800200C9A66");
@@ -85,6 +99,9 @@ namespace OWCE
         public const string UNKNOWN3UUID = "E659F31F-EA98-11E3-AC10-0800200C9A66";
         public const string UNKNOWN4UUID = "E659F320-EA98-11E3-AC10-0800200C9A66";
 
+        public event BatteryPercentChangedEventHandler BatteryPercentChanged;
+        public event SpeedChangedEventHandler SpeedChanged;
+
         private int _serialNumber;
         public int SerialNumber
         {
@@ -92,19 +109,72 @@ namespace OWCE
             set { if (_serialNumber != value) { _serialNumber = value; OnPropertyChanged(); } }
         }
 
+        private int _selectedBatteryPercent;
+        public int SelectedBatteryPercent
+        {
+            get { return _selectedBatteryPercent; }
+            set
+            {
+                if (_selectedBatteryPercent == value)
+                {
+                    return;
+                }
+
+                _selectedBatteryPercent = value;
+                OnPropertyChanged();
+
+                var changedArgs = new BatteryPercentChangedEventArgs();
+                changedArgs.batteryPercentValue = value;
+                OnBatteryPercentChanged(changedArgs);
+            }
+        }
+
         private int _batteryPercent;
         public int BatteryPercent
         {
             get { return _batteryPercent; }
-            set { if (_batteryPercent != value) { _batteryPercent = value; OnPropertyChanged(); } }
+            set
+            {
+                if (_batteryPercent == value)
+                {
+                    return;
+                }
+
+                _batteryPercent = value;
+                OnPropertyChanged();
+
+                if (!App.Current.BatteryPercentInferredBasedOnVoltage)
+                {
+                    SelectedBatteryPercent = BatteryPercent;
+                }
+            }
         }
 
         private int _batteryPercentInferredFromVoltage;
         public int BatteryPercentInferredFromVoltage
         {
             get { return _batteryPercentInferredFromVoltage; }
-            set { if (_batteryPercentInferredFromVoltage != value) { _batteryPercentInferredFromVoltage = value; OnPropertyChanged(); } }
+            set
+            {
+                if (_batteryPercentInferredFromVoltage == value)
+                {
+                    return;
+                }
+
+                _batteryPercentInferredFromVoltage = value;
+                OnPropertyChanged();
+
+                if (App.Current.BatteryPercentInferredBasedOnVoltage)
+                {
+                    SelectedBatteryPercent = BatteryPercentInferredFromVoltage;
+                }
+            }
         }
+
+        /*
+         * Indirectly add to event handler. Make reference for event.
+         * 
+         */
 
         private int _batteryLow5;
         public int BatteryLow5
@@ -291,7 +361,20 @@ namespace OWCE
         public float Speed
         {
             get { return _speed; }
-            set { if (_speed.AlmostEqualTo(value) == false) { _speed = value; OnPropertyChanged(); } }
+            set
+            {
+                if (_speed.AlmostEqualTo(value))
+                {
+                    return;
+                }
+
+                _speed = value;
+                OnPropertyChanged();
+
+                var speedArgs = new SpeedChangedEventArgs();
+                speedArgs.speedValue = value;
+                OnSpeedChanged(speedArgs);
+            }
         }
 
         private ushort _hardwareRevision;
@@ -558,6 +641,22 @@ namespace OWCE
 #endif
         }
 
+        private void OnBatteryPercentChanged(BatteryPercentChangedEventArgs e)
+        {
+            if (BatteryPercentChanged != null)
+            {
+                BatteryPercentChanged(this, e);
+            }
+        }
+
+        private void OnSpeedChanged(SpeedChangedEventArgs e)
+        {
+            if (SpeedChanged != null)
+            {
+                SpeedChanged(this, e);
+            }
+        }
+
         void LogData(string characteristicGuid, byte[] data)
         {
             var byteString = ByteString.CopyFrom(data);
@@ -633,7 +732,7 @@ namespace OWCE
         }
 
         static int _mockBatteryPercent = 100;
-        static float _mockBatteryVoltage = 63.1f;
+        //static float _mockBatteryVoltage = 63.1f;
         private Timer _mockBatteryPercentChangeTimer;
         private void StartMockBatteryChangeTimer() // TODO: Mock voltage
         {
@@ -644,7 +743,7 @@ namespace OWCE
             }
             else
             {
-                _mockBatteryPercentChangeTimer = new Timer((object state) => { _batteryPercent.Value = _mockBatteryPercent-- % 100; }, null, 0, 1500);
+                _mockBatteryPercentChangeTimer = new Timer((object state) => { BatteryPercent = _mockBatteryPercent-- % 100; }, null, 0, 1500);
             }
         }
 #endif // DEBUG

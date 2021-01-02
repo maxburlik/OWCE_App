@@ -52,7 +52,7 @@
 
             System.Diagnostics.Debug.WriteLine("ACTIVATED Speed Reporting");
 
-            _board.Speed.SpeedChanged += Board_SpeedChanged;
+            _board.SpeedChanged += Board_SpeedChanged;
         }
 
         public override void Stop()
@@ -62,14 +62,14 @@
                 return;
             }
 
-            _board.Speed.SpeedChanged -= Board_SpeedChanged;
+            _board.SpeedChanged -= Board_SpeedChanged;
 
             _running = false;
 
             System.Diagnostics.Debug.WriteLine("DEACTIVATED Speed Reporting");
         }
 
-        private void Board_SpeedChanged(object sender, Models.SpeedBoardDetail.SpeedChangedEventArgs e)
+        private void Board_SpeedChanged(object sender, SpeedChangedEventArgs e)
         {
             var currentTime = DateTime.Now;
             int newSpeed = (int)SpeedConverter.ConvertSpeedValue(e.speedValue, App.Current.MetricDisplay);

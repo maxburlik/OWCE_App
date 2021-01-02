@@ -15,14 +15,12 @@
         private bool _running = false;
         private DateTime _nextReportTime = DateTime.Now;
         private OWBoard _board;
-        private bool _percentInferredFromVoltage;
         private Dictionary<int, DateTime> _announcedValues = new Dictionary<int, DateTime>();
 
         public BatteryPercentReporting(OWBoard board, TextToSpeechProvider ttsProvider) : base(ttsProvider)
         {
             _board = board;
             TextToSpeechPriority = 3;
-            _percentInferredFromVoltage = App.Current.BatteryPercentInferredBasedOnVoltage;
 
             Debug.WriteLine($"Battery Percent Reporting created for board {board.Name}");
         }
@@ -36,14 +34,7 @@
 
             System.Diagnostics.Debug.WriteLine("ACTIVATED Battery Percent detector");
 
-            if (_percentInferredFromVoltage)
-            {
-                _board.BatteryPercentInferredFromVoltage.BatteryPercentChanged += Board_BatteryPercentChanged;
-            }
-            else
-            {
-                _board.BatteryPercent.BatteryPercentChanged += Board_BatteryPercentChanged;
-            }
+            _board.BatteryPercentChanged += Board_BatteryPercentChanged;
         }
 
         public override void Stop()
@@ -53,21 +44,14 @@
                 return;
             }
 
-            if (_percentInferredFromVoltage)
-            {
-                _board.BatteryPercentInferredFromVoltage.BatteryPercentChanged -= Board_BatteryPercentChanged;
-            }
-            else
-            {
-                _board.BatteryPercent.BatteryPercentChanged -= Board_BatteryPercentChanged;
-            }
+            _board.BatteryPercentChanged -= Board_BatteryPercentChanged;
 
             _running = false;
 
             System.Diagnostics.Debug.WriteLine("DEACTIVATED Battery Percent detector");
         }
 
-        private void Board_BatteryPercentChanged(object sender, Models.BatteryPercentBoardDetail.BatteryPercentChangedEventArgs e)
+        private void Board_BatteryPercentChanged(object sender, BatteryPercentChangedEventArgs e)
         {
             var currentTime = DateTime.Now;
 

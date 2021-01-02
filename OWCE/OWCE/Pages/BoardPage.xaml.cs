@@ -19,6 +19,7 @@ namespace OWCE.Pages
         ConnectingAlert _reconnectingAlert;
 
         public OWBoard Board { get; private set; }
+
         /*
         public string SpeedHeader
         {
@@ -38,9 +39,7 @@ namespace OWCE.Pages
         public BoardPage(OWBoard board) : base()
         {
             Board = board;
-            SelectedBatteryPercent = App.Current.BatteryPercentInferredBasedOnVoltage
-                ? board.BatteryPercentInferredFromVoltage
-                : board.BatteryPercent;
+
             board.Init();
 
             BindingContext = this;
@@ -83,7 +82,8 @@ namespace OWCE.Pages
 
             if (App.Current.SpeedReporting)
             {
-                StartRunningSpeedReporting();
+                _speedReporting = new SpeedReporting(this.Board, _ttsProvider);
+                _speedReporting.Start();
             }
 
             if (App.Current.BatteryPercentReporting)
@@ -158,17 +158,6 @@ namespace OWCE.Pages
         {
             //DisconnectAndPop();
             return false;
-        }
-
-        private void StartRunningSpeedReporting()
-        {
-            if (_speedReporting == null)
-            {
-                _speedReporting = new SpeedReporting(this.Board, _ttsProvider);
-                _speedReporting.Start();
-                StartSpeedReporting.Text = "Speed Reporting Active";
-                StartSpeedReporting.TextColor = Color.LightGreen;
-            }
         }
 
         async void Disconnect_Tapped(object sender, EventArgs e)

@@ -120,16 +120,5 @@ namespace OWCE.Pages
 
             DisplayAlert("Oops", "Please disconnect and reconnect from your board for this change to apply.\n\nThis will be fixed in the future.", "Ok");
         }
-
-        private void WheelslipReporting_Toggled(object sender, Xamarin.Forms.ToggledEventArgs e)
-        {
-            App.Current.WheelslipReporting = e.Value;
-            Preferences.Set("wheelslip_reporting", e.Value);
-
-            if (_ignoreAlerts)
-                return;
-
-            DisplayAlert("Oops", "Please disconnect and reconnect from your board for this change to apply.\n\nThis will be fixed in the future.", "Ok");
-        }
     }
 }
