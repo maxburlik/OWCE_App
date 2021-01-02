@@ -47,6 +47,20 @@ namespace OWCE
         public const int Pint_Skyline = 8;
     }
 
+    public class BatteryPercentChangedEventArgs : EventArgs
+    {
+        public int batteryPercentValue;
+    }
+
+    public delegate void BatteryPercentChangedEventHandler(object sender, BatteryPercentChangedEventArgs e);
+
+    public class SpeedChangedEventArgs : EventArgs
+    {
+        public float speedValue;
+    }
+
+    public delegate void SpeedChangedEventHandler(object sender, SpeedChangedEventArgs e);
+
     public class OWBoard : OWBaseBoard
     {
         public static readonly Guid ServiceUUID = new Guid("E659F300-EA98-11E3-AC10-0800200C9A66");
@@ -85,6 +99,9 @@ namespace OWCE
         public const string UNKNOWN3UUID = "E659F31F-EA98-11E3-AC10-0800200C9A66";
         public const string UNKNOWN4UUID = "E659F320-EA98-11E3-AC10-0800200C9A66";
 
+        public event BatteryPercentChangedEventHandler BatteryPercentChanged;
+        public event SpeedChangedEventHandler SpeedChanged;
+
         private int _serialNumber;
         public int SerialNumber
         {
@@ -92,12 +109,72 @@ namespace OWCE
             set { if (_serialNumber != value) { _serialNumber = value; OnPropertyChanged(); } }
         }
 
+        private int _selectedBatteryPercent;
+        public int SelectedBatteryPercent
+        {
+            get { return _selectedBatteryPercent; }
+            set
+            {
+                if (_selectedBatteryPercent == value)
+                {
+                    return;
+                }
+
+                _selectedBatteryPercent = value;
+                OnPropertyChanged();
+
+                var changedArgs = new BatteryPercentChangedEventArgs();
+                changedArgs.batteryPercentValue = value;
+                OnBatteryPercentChanged(changedArgs);
+            }
+        }
+
         private int _batteryPercent;
         public int BatteryPercent
         {
             get { return _batteryPercent; }
-            set { if (_batteryPercent != value) { _batteryPercent = value; OnPropertyChanged(); } }
+            set
+            {
+                if (_batteryPercent == value)
+                {
+                    return;
+                }
+
+                _batteryPercent = value;
+                OnPropertyChanged();
+
+                if (!App.Current.BatteryPercentInferredBasedOnVoltage)
+                {
+                    SelectedBatteryPercent = BatteryPercent;
+                }
+            }
         }
+
+        private int _batteryPercentInferredFromVoltage;
+        public int BatteryPercentInferredFromVoltage
+        {
+            get { return _batteryPercentInferredFromVoltage; }
+            set
+            {
+                if (_batteryPercentInferredFromVoltage == value)
+                {
+                    return;
+                }
+
+                _batteryPercentInferredFromVoltage = value;
+                OnPropertyChanged();
+
+                if (App.Current.BatteryPercentInferredBasedOnVoltage)
+                {
+                    SelectedBatteryPercent = BatteryPercentInferredFromVoltage;
+                }
+            }
+        }
+
+        /*
+         * Indirectly add to event handler. Make reference for event.
+         * 
+         */
 
         private int _batteryLow5;
         public int BatteryLow5
@@ -284,7 +361,20 @@ namespace OWCE
         public float Speed
         {
             get { return _speed; }
-            set { if (_speed.AlmostEqualTo(value) == false) { _speed = value; OnPropertyChanged(); } }
+            set
+            {
+                if (_speed.AlmostEqualTo(value))
+                {
+                    return;
+                }
+
+                _speed = value;
+                OnPropertyChanged();
+
+                var speedArgs = new SpeedChangedEventArgs();
+                speedArgs.speedValue = value;
+                OnSpeedChanged(speedArgs);
+            }
         }
 
         private ushort _hardwareRevision;
@@ -446,10 +536,6 @@ namespace OWCE
         }
         */
 
-
-
-
-
         private bool _lightMode = false;
         public bool LightMode
         {
@@ -506,20 +592,20 @@ namespace OWCE
             set { if (_rssi != value) { _rssi = value; OnPropertyChanged(); } }
         }
 
-        IOWBLE _owble;
+        private IOWBLE _owble;
 
-        bool _isLogging = false;
-        OWBoardEventList _events = new OWBoardEventList();
-        List<OWBoardEvent> _initialEvents;
-        Ride _currentRide = null;
-        bool _keepHandshakeBackgroundRunning = false;
-        List<byte> _handshakeBuffer = null;
-        bool _isHandshaking = false;
-        TaskCompletionSource<byte[]> _handshakeTaskCompletionSource = null;
+        private bool _isLogging = false;
+        private OWBoardEventList _events = new OWBoardEventList();
+        private List<OWBoardEvent> _initialEvents;
+        private Ride _currentRide = null;
+        private bool _keepHandshakeBackgroundRunning = false;
+        private List<byte> _handshakeBuffer = null;
+        private bool _isHandshaking = false;
+        private TaskCompletionSource<byte[]> _handshakeTaskCompletionSource = null;
+        private VoltageAggregator _voltageAggregator = new VoltageAggregator();
 
         public OWBoard(IOWBLE owble, OWBaseBoard baseBoard) : base(baseBoard)
         {
-
             _owble = owble;
             _id = baseBoard.ID;
             _name = baseBoard.Name;
@@ -555,6 +641,22 @@ namespace OWCE
 #endif
         }
 
+        private void OnBatteryPercentChanged(BatteryPercentChangedEventArgs e)
+        {
+            if (BatteryPercentChanged != null)
+            {
+                BatteryPercentChanged(this, e);
+            }
+        }
+
+        private void OnSpeedChanged(SpeedChangedEventArgs e)
+        {
+            if (SpeedChanged != null)
+            {
+                SpeedChanged(this, e);
+            }
+        }
+
         void LogData(string characteristicGuid, byte[] data)
         {
             var byteString = ByteString.CopyFrom(data);
@@ -581,6 +683,10 @@ namespace OWCE
             {
                 SaveEvents();
             }
+
+#if DEBUG
+            MockSetup();
+#endif
         }
 
         private void OWBLE_BoardValueChanged(string characteristicGuid, byte[] data)
@@ -614,6 +720,33 @@ namespace OWCE
             RSSI = rssi;
         }
 
+#if DEBUG
+        static bool _enableMockBatteryPercentage = false;
+
+        private void MockSetup()
+        {
+            if (_enableMockBatteryPercentage)
+            {
+                StartMockBatteryChangeTimer();
+            }
+        }
+
+        static int _mockBatteryPercent = 100;
+        //static float _mockBatteryVoltage = 63.1f;
+        private Timer _mockBatteryPercentChangeTimer;
+        private void StartMockBatteryChangeTimer() // TODO: Mock voltage
+        {
+            if (App.Current.BatteryPercentInferredBasedOnVoltage)
+            {
+                // TODO: Mock for voltage
+                //_mockBatteryPercentChangeTimer = new Timer((object state) => { _batteryPercentInferredFromVoltage.Value = (_mockBatteryVoltage -= 0.1f); }, null, 0, 1500);
+            }
+            else
+            {
+                _mockBatteryPercentChangeTimer = new Timer((object state) => { BatteryPercent = _mockBatteryPercent-- % 100; }, null, 0, 1500);
+            }
+        }
+#endif // DEBUG
 
         // TODO: Restore, Dictionary<string, ICharacteristic> _characteristics = new Dictionary<string, ICharacteristic>();
 
@@ -1163,6 +1296,7 @@ namespace OWCE
                     break;
                 case RpmUUID:
                     RPM = value;
+                    Speed = Converters.RpmToSpeedConverter.ConvertSpeedValueFromRpm(value, WheelCircumference, App.Current.MetricDisplay);
                     break;
                 case RideModeUUID:
                     RideMode = value;
@@ -1219,6 +1353,11 @@ namespace OWCE
                     break;
                 case BatteryVoltageUUID:
                     BatteryVoltage = 0.1f * value;
+
+                    _voltageAggregator.AppendVoltageEntry(BatteryVoltage);
+
+                    float medianVoltage = _voltageAggregator.GetMedianVoltage();
+                    BatteryPercentInferredFromVoltage = Converters.BatteryVoltageConverter.GetBatteryPercentEstimate(medianVoltage);
                     break;
                 case SafetyHeadroomUUID:
                     SafetyHeadroom = value;
