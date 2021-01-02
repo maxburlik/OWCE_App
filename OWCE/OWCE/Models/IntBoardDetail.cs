@@ -4,7 +4,7 @@ namespace OWCE.Models
     public class IntBoardDetail : BaseBoardDetail
     {
         private int _value;
-        public int Value
+        public virtual int Value
         {
             get
             {

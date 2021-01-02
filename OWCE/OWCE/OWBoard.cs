@@ -67,7 +67,8 @@ namespace OWCE
         public const string UNKNOWN4UUID = "E659F320-EA98-11E3-AC10-0800200C9A66";
 
         protected IntBoardDetail _serialNumber = new IntBoardDetail("Serial number");
-        protected IntBoardDetail _batteryPercent = new IntBoardDetail("Battery percent");
+        protected BatteryPercentBoardDetail _batteryPercent = new BatteryPercentBoardDetail("Battery percent");
+        protected BatteryPercentBoardDetail _batteryPercentInferredFromVoltage = new BatteryPercentBoardDetail("Battery percent (voltage)");
         protected IntBoardDetail _batteryLow5 = new IntBoardDetail("Battery low 5");
         protected IntBoardDetail _batteryLow20 = new IntBoardDetail("Battery low 20");
         protected IntBoardDetail _batterySerial = new IntBoardDetail("Battery serial number");
@@ -243,10 +244,16 @@ namespace OWCE
             get { return _speed; }
         }
 
-        
+        public BatteryPercentBoardDetail BatteryPercent
+        {
+            get { return _batteryPercent; }
+        }
 
+        public BatteryPercentBoardDetail BatteryPercentInferredFromVoltage
+        {
+            get { return _batteryPercentInferredFromVoltage; }
+        }
 
-        
 
 
 
@@ -317,13 +324,14 @@ namespace OWCE
         private List<OWBoardEvent> _initialEvents = new List<OWBoardEvent>();
         private Ride _currentRide = null;
         private bool _keepHandshakeBackgroundRunning = false;
+        private VoltageAggregator _voltageAggregator = new VoltageAggregator();
+
 
         public List<BaseBoardDetail> FullBoardDetailsList { get; } = new List<BaseBoardDetail>();
         public ObservableCollection<BaseBoardDetail> SelectedBoardDetailsList { get; } = new ObservableCollection<BaseBoardDetail>();
 
         public OWBoard()
         {
-
         }
 
         public OWBoard(OWBaseBoard baseBoard)
@@ -338,7 +346,6 @@ namespace OWCE
         {
             App.Current.OWBLE.BoardValueChanged += OWBLE_BoardValueChanged;
 
-
             FullBoardDetailsList.Add(_serialNumber);
             FullBoardDetailsList.Add(_batterySerial);
             FullBoardDetailsList.Add(_hardwareRevision);
@@ -350,6 +357,7 @@ namespace OWCE
             FullBoardDetailsList.Add(_speed);
             FullBoardDetailsList.Add(_rideMode);
             FullBoardDetailsList.Add(_batteryPercent);
+            FullBoardDetailsList.Add(_batteryPercentInferredFromVoltage);
             FullBoardDetailsList.Add(_batteryVoltage);
             FullBoardDetailsList.Add(_currentAmps);
             FullBoardDetailsList.Add(_batteryCells);
@@ -380,6 +388,7 @@ namespace OWCE
             //SelectedBoardDetailsList.Add(_speed);
             SelectedBoardDetailsList.Add(_rideMode);
             SelectedBoardDetailsList.Add(_batteryPercent);
+            SelectedBoardDetailsList.Add(_batteryPercentInferredFromVoltage);
             SelectedBoardDetailsList.Add(_batteryVoltage);
             SelectedBoardDetailsList.Add(_currentAmps);
             SelectedBoardDetailsList.Add(_batteryCells);
@@ -397,8 +406,11 @@ namespace OWCE
             //SelectedBoardDetailsList.Add(_safetyHeadroom);
             //SelectedBoardDetailsList.Add(_batteryLow5);
             //SelectedBoardDetailsList.Add(_batteryLow20);
-        }
 
+#if DEBUG
+            MockSetup();
+#endif
+        }
 
         private void OWBLE_BoardValueChanged(string characteristicGuid, byte[] data)
         {
@@ -420,9 +432,34 @@ namespace OWCE
             SetValue(characteristicGuid, data);
         }
 
-        
+#if DEBUG
+        static bool _enableMockBatteryPercentage = false;
 
-       
+        private void MockSetup()
+        {
+            if (_enableMockBatteryPercentage)
+            {
+                StartMockBatteryChangeTimer();
+            }
+        }
+
+        static int _mockBatteryPercent = 100;
+        static float _mockBatteryVoltage = 63.1f;
+        private Timer _mockBatteryPercentChangeTimer;
+        private void StartMockBatteryChangeTimer() // TODO: Mock voltage
+        {
+            if (App.Current.BatteryPercentInferredBasedOnVoltage)
+            {
+                // TODO: Mock, clean up
+                //_mockBatteryPercentChangeTimer = new Timer((object state) => { _batteryPercentInferredFromVoltage.Value = (_mockBatteryVoltage -= 0.1f); }, null, 0, 1500);
+            }
+            else
+            {
+                _mockBatteryPercentChangeTimer = new Timer((object state) => { _batteryPercent.Value = _mockBatteryPercent-- % 100; }, null, 0, 1500);
+            }
+        }
+#endif // DEBUG
+
 
         // TODO: Restore, Dictionary<string, ICharacteristic> _characteristics = new Dictionary<string, ICharacteristic>();
 
@@ -1087,6 +1124,11 @@ ReadRequestReceived - LifetimeOdometer
                     break;
                 case BatteryVoltageUUID:
                     _batteryVoltage.Value = 0.1f * value;
+
+                    _voltageAggregator.AppendVoltageEntry(_batteryVoltage.Value);
+
+                    float medianVoltage = _voltageAggregator.GetMedianVoltage();
+                    _batteryPercentInferredFromVoltage.Value = Converters.BatteryVoltageConverter.GetBatteryPercentEstimate(medianVoltage);
                     break;
                 case SafetyHeadroomUUID:
                     _safetyHeadroom.Value = value;

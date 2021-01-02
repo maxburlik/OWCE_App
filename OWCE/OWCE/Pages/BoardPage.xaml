@@ -47,7 +47,7 @@
                     <gauge:SfCircularGauge.Scales>
                         <gauge:Scale Interval="0" RimThickness="0" ShowTicks="false" ShowRim="false" StartAngle="180" SweepAngle="360" ShowLabels="false" ShowFirstLabel="true" StartValue="0" EndValue="100">
                             <gauge:Scale.Ranges>
-                                <gauge:Range StartValue="0" Offset="1"  Thickness="10"   EndValue="{Binding Board.BatteryPercent.Value}">
+                                <gauge:Range StartValue="0" Offset="1"  Thickness="10"   EndValue="{Binding SelectedBatteryPercent.Value}">
                                     <gauge:Range.GradientStops>
                                         <gauge:GaugeGradientStop Value="0" Color="Red"/>
                                         <gauge:GaugeGradientStop Value="15" Color="Orange"/>
@@ -59,11 +59,22 @@
                      </gauge:SfCircularGauge.Scales>
                     
                 </gauge:SfCircularGauge>
-                <Label AbsoluteLayout.LayoutFlags="All" AbsoluteLayout.LayoutBounds="0.975,0.025,0.15,0.15" Text="{Binding Board.BatteryPercent.Value}" FontSize="25" VerticalTextAlignment="Center" HorizontalTextAlignment="Center"/>
+                <Label AbsoluteLayout.LayoutFlags="All" AbsoluteLayout.LayoutBounds="0.975,0.025,0.15,0.15" Text="{Binding SelectedBatteryPercent.Value}" FontSize="25" VerticalTextAlignment="Center" HorizontalTextAlignment="Center"/>
                 
             </AbsoluteLayout>
 
             <CollectionView ItemsSource="{Binding Board.SelectedBoardDetailsList}" ItemTemplate="{StaticResource DetailTemplateSelector}">
+                <CollectionView.Header>
+                    <StackLayout Padding="20">
+                        <yummy:PancakeView Style="{StaticResource PancakeButtonStyle}">
+                            <Label x:Name="StartSpeedReporting" Text="Start Speed Reporting" Style="{StaticResource LabelButtonStyle}" />
+                            <yummy:PancakeView.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="SpeedReporting_Tapped" />
+                            </yummy:PancakeView.GestureRecognizers>
+                        </yummy:PancakeView>
+                    </StackLayout>
+                </CollectionView.Header>
+                
                 <CollectionView.Footer>
                     <StackLayout Padding="20">
                        <yummy:PancakeView Style="{StaticResource PancakeButtonStyle}">

@@ -4,7 +4,7 @@ namespace OWCE.Models
     public class FloatBoardDetail : BaseBoardDetail
     {
         private float _value;
-        public float Value
+        public virtual float Value
         {
             get
             {
@@ -12,7 +12,7 @@ namespace OWCE.Models
             }
             set
             {
-                if (_value.AlmostEqualTo(value) == false)
+                if (!_value.AlmostEqualTo(value))
                 {
                     _value = value;
                     OnPropertyChanged();

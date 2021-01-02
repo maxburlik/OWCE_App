@@ -26,11 +26,46 @@ namespace OWCE
             get; set;
         }
 
+        public bool SpeedReporting
+        {
+            get; set;
+        }
+
+        public int SpeedReportingBaselineTimeout
+        {
+            get; set;
+        }
+
+        public int SpeedReportingMinimum
+        {
+            get; set;
+        }
+
+        public bool BatteryPercentReporting
+        {
+            get; set;
+        }
+
+        public bool BatteryPercentInferredBasedOnVoltage
+        {
+            get; set;
+        }
+
+        public bool WheelslipReporting
+        {
+            get; set;
+        }
+
         public App()
         {
             MetricDisplay = Preferences.Get("metric_display", System.Globalization.RegionInfo.CurrentRegion.IsMetric);
             SpeedDemon = Preferences.Get("speed_demon", false);
-
+            SpeedReporting = Preferences.Get("speed_reporting", true);
+            SpeedReportingBaselineTimeout = Preferences.Get("speedreporting_baseline_timeout", 15);
+            SpeedReportingMinimum = Preferences.Get("speedreporting_minimum", System.Globalization.RegionInfo.CurrentRegion.IsMetric ? 5 : 3);
+            BatteryPercentReporting = Preferences.Get("batterypercent_reporting", true);
+            BatteryPercentInferredBasedOnVoltage = Preferences.Get("batterypercent_inferred_voltage", false);
+            WheelslipReporting = Preferences.Get("wheelslip_reporting", false);
 
             OWBLE = DependencyService.Get<IOWBLE>();
 

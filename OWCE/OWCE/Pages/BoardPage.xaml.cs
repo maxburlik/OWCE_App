@@ -1,17 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using Xamarin.Essentials;
-using Xamarin.Forms;
-using RestSharp;
-using System.Net;
-using System.IO;
-using System.Threading.Tasks;
-
-namespace OWCE.Pages
+﻿namespace OWCE.Pages
 {
+    using Models;
+    using System;
+    using System.Collections.Generic;
+    using Xamarin.Essentials;
+    using Xamarin.Forms;
+    using RestSharp;
+    using System.Net;
+    using System.IO;
+    using System.Threading.Tasks;
+
     public partial class BoardPage : ContentPage
     {
         public OWBoard Board { get; internal set; }
+
+        public BatteryPercentBoardDetail SelectedBatteryPercent { get; internal set; }
 
         public string SpeedHeader
         {
@@ -22,10 +25,19 @@ namespace OWCE.Pages
             }
         }
 
-        private bool _initialSubscirbe = false;
+        private bool _initialSubscribe = false;
+
+        private TextToSpeechProvider _ttsProvider = null;
+        private SpeedReporting _speedReporting = null;
+        private BatteryPercentReporting _batteryPercentReporting = null;
+        private WheelslipReporting _wheelslipReporting = null;
+
         public BoardPage(OWBoard board)
         {
             Board = board;
+            SelectedBatteryPercent = App.Current.BatteryPercentInferredBasedOnVoltage
+                ? board.BatteryPercentInferredFromVoltage
+                : board.BatteryPercent;
             board.Init();
 
             BindingContext = this;
@@ -39,15 +51,33 @@ namespace OWCE.Pages
                 Navigation.PushModalAsync(new NavigationPage(new BoardDetailsPage(Board)));
             }));
 
+            _ttsProvider = new TextToSpeechProvider();
+
+            if (App.Current.SpeedReporting)
+            {
+                StartRunningSpeedReporting();
+            }
+
+            if (App.Current.BatteryPercentReporting)
+            {
+                _batteryPercentReporting = new BatteryPercentReporting(board, _ttsProvider);
+                _batteryPercentReporting.Start();
+            }
+
+            if (App.Current.WheelslipReporting)
+            {
+                _wheelslipReporting = new WheelslipReporting(board, _ttsProvider);
+                _wheelslipReporting.Start();
+            }
         }
 
         protected override void OnAppearing()
         {
             base.OnAppearing();
 
-            if (_initialSubscirbe == false)
+            if (_initialSubscribe == false)
             {
-                _initialSubscirbe = true;
+                _initialSubscribe = true;
                 _ = Board.SubscribeToBLE();
             }
 
@@ -91,7 +121,23 @@ namespace OWCE.Pages
             return false;
         }
 
-        async void Disconnect_Tapped(System.Object sender, System.EventArgs e)
+        private void SpeedReporting_Tapped(object sender, EventArgs e)
+        {
+            StartRunningSpeedReporting();
+        }
+
+        private void StartRunningSpeedReporting()
+        {
+            if (_speedReporting == null)
+            {
+                _speedReporting = new SpeedReporting(this.Board, _ttsProvider);
+                _speedReporting.Start();
+                StartSpeedReporting.Text = "Speed Reporting Active";
+                StartSpeedReporting.TextColor = Color.LightGreen;
+            }
+        }
+
+        async void Disconnect_Tapped(object sender, EventArgs e)
         {
             var result = await DisplayActionSheet("Are you sure you want to disconnect?", "Cancel", "Disconnect");
             if (result == "Disconnect")
@@ -102,6 +148,29 @@ namespace OWCE.Pages
 
         private async Task DisconnectAndPop()
         {
+            if (_speedReporting != null)
+            {
+                _speedReporting.Stop();
+                _speedReporting = null;
+            }
+
+            if (_batteryPercentReporting != null)
+            {
+                _batteryPercentReporting.Stop();
+                _batteryPercentReporting = null;
+            }
+
+            if (_wheelslipReporting != null)
+            {
+                _wheelslipReporting.Stop();
+                _wheelslipReporting = null;
+            }
+
+            if (_ttsProvider != null)
+            {
+                _ttsProvider.SpeakMessage("OWCE Status: Disconnecting", 3);
+            }
+
             await Board.Disconnect();
             await Navigation.PopAsync();
         }
@@ -180,6 +249,5 @@ namespace OWCE.Pages
 
         }
         */
-
     }
 }
