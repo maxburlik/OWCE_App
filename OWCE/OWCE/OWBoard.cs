@@ -171,11 +171,6 @@ namespace OWCE
             }
         }
 
-        /*
-         * Indirectly add to event handler. Make reference for event.
-         * 
-         */
-
         private int _batteryLow5;
         public int BatteryLow5
         {
@@ -312,7 +307,24 @@ namespace OWCE
         public float BatteryVoltage
         {
             get { return _batteryVoltage; }
-            set { if (_batteryVoltage.AlmostEqualTo(value) == false) { _batteryVoltage = value; OnPropertyChanged(); } }
+            set
+            {
+                if (_batteryVoltage.AlmostEqualTo(value))
+                {
+                    return;
+                }
+
+                _batteryVoltage = value;
+                OnPropertyChanged();
+
+                if (_voltageAggregator != null)
+                {
+                    _voltageAggregator.AppendVoltageEntry(value);
+
+                    float medianVoltage = _voltageAggregator.GetMedianVoltage();
+                    BatteryPercentInferredFromVoltage = Converters.BatteryVoltageConverter.GetBatteryPercentEstimate(medianVoltage);
+                }
+            }
         }
 
         private int _safetyHeadroom;
@@ -639,6 +651,10 @@ namespace OWCE
                 StartLogging();
             }
 #endif
+
+#if DEBUG
+            MockSetup();
+#endif
         }
 
         private void OnBatteryPercentChanged(BatteryPercentChangedEventArgs e)
@@ -683,10 +699,6 @@ namespace OWCE
             {
                 SaveEvents();
             }
-
-#if DEBUG
-            MockSetup();
-#endif
         }
 
         private void OWBLE_BoardValueChanged(string characteristicGuid, byte[] data)
@@ -721,30 +733,34 @@ namespace OWCE
         }
 
 #if DEBUG
-        static bool _enableMockBatteryPercentage = false;
+        static bool _enableMockBatteryPercentage = false; // Enable this to walk through battery % values
+        private bool _mockSetupHasBeenEnabledForThisBoard = false;
 
         private void MockSetup()
         {
-            if (_enableMockBatteryPercentage)
+            if (_enableMockBatteryPercentage && !_mockSetupHasBeenEnabledForThisBoard)
             {
+                _mockSetupHasBeenEnabledForThisBoard = true;
                 StartMockBatteryChangeTimer();
             }
         }
 
         static int _mockBatteryPercent = 100;
-        //static float _mockBatteryVoltage = 63.1f;
+        static float _mockBatteryVoltage = 63.1f;
         private Timer _mockBatteryPercentChangeTimer;
-        private void StartMockBatteryChangeTimer() // TODO: Mock voltage
+        private void StartMockBatteryChangeTimer()
         {
-            if (App.Current.BatteryPercentInferredBasedOnVoltage)
+            _mockBatteryPercentChangeTimer = new Timer((object state) =>
             {
-                // TODO: Mock for voltage
-                //_mockBatteryPercentChangeTimer = new Timer((object state) => { _batteryPercentInferredFromVoltage.Value = (_mockBatteryVoltage -= 0.1f); }, null, 0, 1500);
-            }
-            else
-            {
-                _mockBatteryPercentChangeTimer = new Timer((object state) => { BatteryPercent = _mockBatteryPercent-- % 100; }, null, 0, 1500);
-            }
+                if (App.Current.BatteryPercentInferredBasedOnVoltage)
+                {
+                    BatteryVoltage = (_mockBatteryVoltage -= 0.1f);
+                }
+                else
+                {
+                    BatteryPercent = _mockBatteryPercent-- % 100;
+                }
+            }, null, 0, 1500);
         }
 #endif // DEBUG
 
@@ -1353,11 +1369,6 @@ namespace OWCE
                     break;
                 case BatteryVoltageUUID:
                     BatteryVoltage = 0.1f * value;
-
-                    _voltageAggregator.AppendVoltageEntry(BatteryVoltage);
-
-                    float medianVoltage = _voltageAggregator.GetMedianVoltage();
-                    BatteryPercentInferredFromVoltage = Converters.BatteryVoltageConverter.GetBatteryPercentEstimate(medianVoltage);
                     break;
                 case SafetyHeadroomUUID:
                     SafetyHeadroom = value;
