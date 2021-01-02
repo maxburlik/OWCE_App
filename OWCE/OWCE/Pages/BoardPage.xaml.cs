@@ -1,22 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using Xamarin.Essentials;
-using Xamarin.Forms;
-using RestSharp;
-using System.Net;
-using System.IO;
-using System.Threading.Tasks;
-using OWCE.Pages.Popup;
-using Rg.Plugins.Popup.Services;
-using System.Linq;
-using OWCE.Views;
-
 namespace OWCE.Pages
 {
+    using System;
+    using System.Collections.Generic;
+    using Xamarin.Essentials;
+    using Xamarin.Forms;
+    using RestSharp;
+    using System.Net;
+    using System.IO;
+    using System.Threading.Tasks;
+    using OWCE.Pages.Popup;
+    using Rg.Plugins.Popup.Services;
+    using System.Linq;
+    using OWCE.Models;
+    using OWCE.Views;
+
     public partial class BoardPage : BaseContentPage
     {
         ConnectingAlert _reconnectingAlert;
-
 
         public OWBoard Board { get; private set; }
         /*
@@ -31,11 +31,19 @@ namespace OWCE.Pages
 
         private bool _initialSubscirbe = false;
 
-
+        private TextToSpeechProvider _ttsProvider = null;
+        private SpeedReporting _speedReporting = null;
+        private BatteryPercentReporting _batteryPercentReporting = null;
 
         public BoardPage(OWBoard board) : base()
         {
             Board = board;
+            SelectedBatteryPercent = App.Current.BatteryPercentInferredBasedOnVoltage
+                ? board.BatteryPercentInferredFromVoltage
+                : board.BatteryPercent;
+            board.Init();
+
+            BindingContext = this;
 
             //board.StartLogging();
             InitializeComponent();
@@ -70,6 +78,19 @@ namespace OWCE.Pages
                 }),
             };
             CustomToolbarItems.Add(settingsToolbarItem);
+
+            _ttsProvider = new TextToSpeechProvider();
+
+            if (App.Current.SpeedReporting)
+            {
+                StartRunningSpeedReporting();
+            }
+
+            if (App.Current.BatteryPercentReporting)
+            {
+                _batteryPercentReporting = new BatteryPercentReporting(board, _ttsProvider);
+                _batteryPercentReporting.Start();
+            }
         }
 
         private void OWBLE_BoardDisconnected()
@@ -87,13 +108,11 @@ namespace OWCE.Pages
                 PopupNavigation.Instance.RemovePageAsync(_reconnectingAlert);
                 _reconnectingAlert = null;
             }), "Reconnecting...");
-            
 
             if (PopupNavigation.Instance.PopupStack.Contains(_reconnectingAlert) == false)
             {
                 PopupNavigation.Instance.PushAsync(_reconnectingAlert, true);
             }
-
         }
 
 
@@ -141,7 +160,18 @@ namespace OWCE.Pages
             return false;
         }
 
-        async void Disconnect_Tapped(System.Object sender, System.EventArgs e)
+        private void StartRunningSpeedReporting()
+        {
+            if (_speedReporting == null)
+            {
+                _speedReporting = new SpeedReporting(this.Board, _ttsProvider);
+                _speedReporting.Start();
+                StartSpeedReporting.Text = "Speed Reporting Active";
+                StartSpeedReporting.TextColor = Color.LightGreen;
+            }
+        }
+
+        async void Disconnect_Tapped(object sender, EventArgs e)
         {
             var result = await DisplayActionSheet("Are you sure you want to disconnect?", "Cancel", "Disconnect");
             if (result == "Disconnect")
@@ -153,6 +183,23 @@ namespace OWCE.Pages
 
         public async Task DisconnectAndPop()
         {
+            if (_speedReporting != null)
+            {
+                _speedReporting.Stop();
+                _speedReporting = null;
+            }
+
+            if (_batteryPercentReporting != null)
+            {
+                _batteryPercentReporting.Stop();
+                _batteryPercentReporting = null;
+            }
+
+            if (_ttsProvider != null)
+            {
+                _ttsProvider.SpeakMessage("OWCE Status: Disconnecting", 3);
+            }
+
             await App.Current.OWBLE.Disconnect();
             await Navigation.PopModalAsync();
         }
@@ -248,6 +295,5 @@ namespace OWCE.Pages
 
         }
         */
-
     }
 }
