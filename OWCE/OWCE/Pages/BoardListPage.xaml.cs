@@ -365,7 +365,10 @@ namespace OWCE.Pages
                     await PopupNavigation.Instance.PushAsync(connectingAlert, true);
 
                     var board = await App.Current.ConnectToBoard(baseBoard, cancellationTokenSource.Token);
-                    await PopupNavigation.Instance.PopAllAsync();
+                    if (PopupNavigation.Instance.PopupStack.Count > 0)
+                    {
+                        await PopupNavigation.Instance.PopAllAsync();
+                    }
                     if (board != null)
                     {
                         await Navigation.PushModalAsync(new Xamarin.Forms.NavigationPage(new BoardPage(board)));
